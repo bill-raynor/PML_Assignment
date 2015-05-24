@@ -1,0 +1,65 @@
+---
+title: "Predictive Learning Assignment"
+author: "W. J. Raynor"
+date: "May 24, 2015"
+output: html_document
+---
+
+```{r echo=FALSE}
+library(knitr)
+library(lattice)
+library(survival)
+library(Formula)
+library(MASS, warn.conflicts = FALSE)
+library(dplyr, warn.conflicts = FALSE)
+library(grid, warn.conflicts = FALSE)
+library(gridExtra, warn.conflicts = FALSE)
+library(ggplot2, warn.conflicts = FALSE)
+library(Hmisc, warn.conflicts = FALSE)
+library(caret, warn.conflicts = FALSE)
+```
+
+## Data Prepartion
+The data were imported from the supplied CSV files:
+```{r}
+pmltrain <- read.csv("pml-training.csv",
+                     na.strings=c("NA", "#DIV/0!"),
+                     stringsAsFactors = FALSE)
+pmltrain$classe <- as.factor(pmltrain$classe)
+pmltest <- read.csv("pml-testing.csv",
+                    na.strings=c("NA", "#DIV/0!"),
+                     stringsAsFactors = FALSE)
+
+pmltrain2 <- pmltrain[,colSums(is.na(pmltrain)) == 0]
+pmltest2 <- pmltest[,colSums(is.na(pmltest)) == 0]
+all.equal(names(pmltest2[,-60]), names(pmltrain2[,-60]))
+base <- pmltrain2[,8:60]
+set.seed(138239)
+inTrain <- createDataPartition(base$classe, p=0.6, list=FALSE)
+training <-base[inTrain,]
+testing <- base[-inTrain,]
+```
+The training data consists of 19622  observations on 160 variables. The test data contains `r nrow(pmltest)` observations on the same variables. Variables with missing values were dropped, leaving 60 variables. Of these, the first 7 columns are id variables and were also dropped. 
+
+The data were divided 60:40 into random test and training partitions to allow cross-validation of the model. Note that the `set.seed()` function was used to ensure reproducibility. 
+
+
+
+## Model Builing
+
+I built a classification model using a random forest method, after setting the seed to a known value. The random forest method was used because that is one of the better generic classifiers available. 
+```{r}
+require(randomForest, warn.conflicts = FALSE)
+set.seed(596977)
+modelRF <- randomForest(classe ~ ., data = training) 
+modelRF
+```
+The model was evaluated using the testing data, with greater than 99% accuracy.
+```{r}
+confusionMatrix(testing$classe, predict(modelRF, newdata = testing))
+```
+In this case, the test accuracy is slightly higher than the training accuracy. I would not expect this level of accuracy on a new population of subject, but would expect similar accuracy on subsamples of the same population of testers. 
+
+
+
+
